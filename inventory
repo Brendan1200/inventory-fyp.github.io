@@ -1,0 +1,149 @@
+index.html
+style.css
+app.js
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory System</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js"></script>
+</head>
+<body>
+  <h1>Inventory Management</h1>
+
+  <form id="inventory-form">
+    <input type="text" id="name" placeholder="Item Name" required>
+    <input type="text" id="sku" placeholder="SKU" required>
+    <input type="number" id="qty" placeholder="Quantity" required>
+    <input type="text" id="location" placeholder="Location" required>
+    <button type="submit">Add Item</button>
+  </form>
+
+  <table id="inventory-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>SKU</th>
+        <th>Qty</th>
+        <th>Location</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 40px;
+  background: #f7f7f7;
+}
+
+h1 {
+  text-align: center;
+}
+
+form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+input, button {
+  padding: 8px;
+  font-size: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+th {
+  background-color: #f4f4f4;
+}
+
+button.action {
+  margin: 2px;
+  padding: 4px 8px;
+}
+
+// --- Firebase Config ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
+  from "https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// --- Elements ---
+const form = document.getElementById("inventory-form");
+const tableBody = document.getElementById("table-body");
+
+// --- Add Item ---
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = form["name"].value;
+  const sku = form["sku"].value;
+  const qty = parseInt(form["qty"].value);
+  const location = form["location"].value;
+
+  await addDoc(collection(db, "inventory"), { name, sku, qty, location });
+  form.reset();
+  loadData();
+});
+
+// --- Load Data ---
+async function loadData() {
+  tableBody.innerHTML = "";
+  const querySnapshot = await getDocs(collection(db, "inventory"));
+  querySnapshot.forEach((docSnap) => {
+    const item = docSnap.data();
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${item.name}</td>
+      <td>${item.sku}</td>
+      <td>${item.qty}</td>
+      <td>${item.location}</td>
+      <td>
+        <button class="action" onclick="deleteItem('${docSnap.id}')">Delete</button>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
+
+window.deleteItem = async (id) => {
+  await deleteDoc(doc(db, "inventory", id));
+  loadData();
+};
+
+// Initial load
+loadData();
+
